@@ -427,34 +427,41 @@
       pickEl.classList.add('qam-pick');
     }, true);
   
-    document.addEventListener('pointerdown', (e) => {
-      if (!pickMode) return;
-      if (e.target.closest && e.target.closest('#qam-panel')) return;
-      e.preventDefault(); e.stopPropagation();
-      const el = e.target;
-      const framed = el.closest ? el.closest('[data-qam-state]') : null;
-      if (framed) {
-        // уже поле — открываем окно поиска параметра
-        const rec = fields.get(getXPath(framed));
-        if (rec) openPanel(rec);
-      } else {
-        // новое ручное поле (панель откроется повторным кликом)
-        const lc = labelCandidate(el);
-        const cf = {
-          x: getXPath(el),
-          id: el.id || '',
-          t: (el.getAttribute && el.getAttribute('data-testid')) || '',
-          n: (el.getAttribute && el.getAttribute('name')) || '',
-          tag: el.tagName.toLowerCase(),
-          text: (el.textContent || '').trim().slice(0, 200),
-          l: (lc ? leafText(lc) : '') || getLabel(el) || getTableLabel(el) || ''
-        };
-        window.__QAM__.removeIgnore(getXPath(el)); // клик = пользователь хочет поле видеть
-        el.setAttribute('data-qam-custom', cf.x);
-        window.__QAM__.addCustom(cf);
-        el.setAttribute('data-qam-state', 'unmapped');
-      }
-    }, true);
+  function handlePickClick(e) {
+    if (!pickMode) return;
+    if (e.target.closest && e.target.closest('#qam-panel')) return; 
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+
+    if (e.type !== 'pointerdown' && e.type !== 'mousedown') return;
+
+    const el = e.target;
+    const framed = el.closest ? el.closest('[data-qam-state]') : null;
+    if (framed) {
+      const rec = fields.get(getXPath(framed));
+      if (rec) openPanel(rec);
+    } else {
+      const lc = labelCandidate(el);
+      const cf = {
+        x: getXPath(el),
+        id: el.id || '',
+        t: (el.getAttribute && el.getAttribute('data-testid')) || '',
+        n: (el.getAttribute && el.getAttribute('name')) || '',
+        tag: el.tagName.toLowerCase(),
+        text: (el.textContent || '').trim().slice(0, 200),
+        l: (lc ? leafText(lc) : '') || getLabel(el) || getTableLabel(el) || ''
+      };
+      window.__QAM__.removeIgnore(getXPath(el)); 
+      el.setAttribute('data-qam-custom', cf.x);
+      window.__QAM__.addCustom(cf);
+      el.setAttribute('data-qam-state', 'unmapped');
+    }
+  }
+
+  ['pointerdown', 'mousedown', 'mouseup', 'click', 'auxclick', 'contextmenu'].forEach((evt) => {
+    document.addEventListener(evt, handlePickClick, true);
+  });
   
     // ---------- Тултип ----------
     let hoverRec = null;
@@ -595,7 +602,7 @@
         setPick(!pickMode);
       }
   
-      // Alt+Q — глобальный тумблер (персистентный)
+      // Alt+Q — глобальный тумблер
       if (e.altKey && e.code === 'KeyQ') {
         const on = !window.__QAM__.enabled;
         chrome.storage.local.set({ qamEnabled: on });
